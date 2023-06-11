@@ -149,6 +149,7 @@ while True:
                     player_rect.center = (200, 700)
                     move_left = False
                     move_right = False
+                    score = 0
                 if event.key == pygame.K_RETURN:
                     game_state = 'menu'
     

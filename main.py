@@ -18,12 +18,25 @@ def vertical_movement(list, speed, surf):
     else:
         return []
 
-def checkCollision(bullets, enemies):
+def checkListCollision(bullets, enemies):
+    global score
+
     for enemy_rect in enemies:
         for bullet_rect in bullets:
             if enemy_rect.colliderect(bullet_rect):
                 enemies.remove(enemy_rect)
                 bullets.remove(bullet_rect)
+                score += 1
+
+def checkCollision(rect, list):
+    global slowboost_start_time, show_time
+
+    for list_rect in list:
+        if list_rect.colliderect(rect):
+            list.remove(list_rect)
+            slowboost_start_time = pygame.time.get_ticks()
+            show_time = -3000
+
 
 pygame.init()
 screen = pygame.display.set_mode((400, 800))
@@ -33,10 +46,18 @@ clock = pygame.time.Clock()
 #variables
 game_state = 'menu'
 progress = 0
-bullets = 5
+bullets = 3
+enemy_speed = 5
+slowboost_show = False
+show_time = -3000
+slowboost_start_time = -5000
+score = 0
 
 enemy_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(enemy_timer, 2000)
+
+slowBoost_timer = pygame.USEREVENT + 2
+pygame.time.set_timer(slowBoost_timer, 4000)
 
 #fonts
 bullet_font = pygame.font.Font('font/retro_gaming.ttf', 30)
@@ -48,8 +69,11 @@ title1_rect = title1_surf.get_rect(center = (200, 40))
 title2_surf = menu_font.render("Shooter", False, '#ffffff')
 title2_rect = title2_surf.get_rect(center = (200, 80))
 
+score_surf = menu_font.render(str(score), False, '#ffffff')
+score_rect = score_surf.get_rect(center = (200, 40))
+
 bullets_left_surf = bullet_font.render(f"Bullets left: {bullets}", False, '#ffffff')
-bullets_left_rect = bullets_left_surf.get_rect(center = (200, 50))
+bullets_left_rect = bullets_left_surf.get_rect(center = (200, 80))
 
 gameover_surf = menu_font.render("GAME OVER", False, '#ffffff')
 gameover_rect = gameover_surf.get_rect(center = (200, 75))
@@ -78,6 +102,10 @@ pocisk_rect_list = []
 enemy_surf = pygame.image.load('graphics/enemy.png').convert_alpha()
 enemy_rect_list = []
 
+#slow boost
+slowboost_surf = pygame.image.load('graphics/slowboost.png').convert_alpha()
+slowboost_rect = slowboost_surf.get_rect()
+
 #menu elementy
 player_menu_surf = pygame.transform.scale_by(player_surf, 3)
 player_menu_rect = player_menu_surf.get_rect(center = (200,400))
@@ -98,15 +126,17 @@ while True:
                 if event.key == pygame.K_SPACE and bullets > 0:
                     pocisk_rect_list.append(pocisk_surf.get_rect(center = player_rect.midtop))
                     bullets -= 1
-                if event.key == pygame.K_g:
-                    game_state = 'gameover'
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_LEFT:
                     move_left = False
                 if event.key == pygame.K_RIGHT:
                     move_right = False
             if event.type == enemy_timer:
-                enemy_rect_list.append(enemy_surf.get_rect(center = (randint(20, 380), -50)))
+                enemy_rect_list.append(enemy_surf.get_rect(center = (randint(20, 380), 0)))
+            if event.type == slowBoost_timer and randint(1, 2) == 1:
+                slowboost_show = True
+                show_time = pygame.time.get_ticks()
+                slowboost_rect.center = (randint(50, 350), randint(100, 550))
         
         if game_state == 'gameover' or game_state == 'menu':
             if event.type == pygame.KEYDOWN:
@@ -117,6 +147,8 @@ while True:
                     pocisk_rect_list = []
                     enemy_rect_list = []
                     player_rect.center = (200, 700)
+                    move_left = False
+                    move_right = False
                 if event.key == pygame.K_RETURN:
                     game_state = 'menu'
     
@@ -130,20 +162,33 @@ while True:
             player_rect.x += 5
         
         pocisk_rect_list = vertical_movement(pocisk_rect_list, -5, pocisk_surf)
-        enemy_rect_list = vertical_movement(enemy_rect_list, 5, enemy_surf)
-        checkCollision(pocisk_rect_list, enemy_rect_list)
+        enemy_rect_list = vertical_movement(enemy_rect_list, enemy_speed, enemy_surf)
+        checkListCollision(pocisk_rect_list, enemy_rect_list)
 
         screen.blit(player_surf,player_rect)
 
         #progress bar
         if progress < 1:
-            progress += 0.008
+            progress += 0.009
         else:
             progress = 0
             bullets += 1
         pygame.draw.rect(screen, ('#ffffff'), pygame.Rect(50, 750, 300*progress, 30))
         bullets_left_surf = bullet_font.render(f"Bullets left: {bullets}", False, '#ffffff')
         screen.blit(bullets_left_surf, bullets_left_rect)
+
+        score_surf = menu_font.render(str(score), False, '#ffffff')
+        screen.blit(score_surf, score_rect)
+
+        if pygame.time.get_ticks() - show_time < 3000:
+            screen.blit(slowboost_surf, slowboost_rect)
+            checkCollision(slowboost_rect, pocisk_rect_list)
+        if pygame.time.get_ticks() - slowboost_start_time < 5000:
+            slowboost_show = False
+            enemy_speed = 3
+        else:
+            enemy_speed = 5
+
     
     if game_state == 'gameover':
         screen.blit(gameover_surf, gameover_rect)
@@ -157,6 +202,8 @@ while True:
         screen.blit(title2_surf, title2_rect)
         screen.blit(pressSpace_surf, pressSpace_rect)
         screen.blit(player_menu_surf, player_menu_rect)
+
+    print(score)
 
     pygame.display.update()
     clock.tick(60)

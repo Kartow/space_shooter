@@ -3,7 +3,7 @@ from sys import exit
 from random import randint
 
 def vertical_movement(list, speed, surf):
-    global game_state
+    global game_state, best_score
 
     if list:
         for rect in list:
@@ -11,6 +11,8 @@ def vertical_movement(list, speed, surf):
                 list.remove(rect)
             if surf == enemy_surf:
                 if rect.y > 800:
+                    if best_score < score:
+                            best_score = score
                     game_state = 'gameover'
             rect.y += speed
             screen.blit(surf, rect)
@@ -37,6 +39,11 @@ def checkCollision(rect, list):
             slowboost_start_time = pygame.time.get_ticks()
             show_time = -3000
 
+def displayBest():
+    best_score_surf = bullet_font.render(f"Best score: {best_score}", False, '#ffffff')
+    best_score_rect = best_score_surf.get_rect(center = (200, 550))
+    screen.blit(best_score_surf, best_score_rect)
+
 
 pygame.init()
 screen = pygame.display.set_mode((400, 800))
@@ -52,6 +59,10 @@ slowboost_show = False
 show_time = -3000
 slowboost_start_time = -5000
 score = 0
+
+with open('best_score.txt', 'r') as best_score_file:
+    best_score = int(best_score_file.read())
+
 
 enemy_timer = pygame.USEREVENT + 1
 pygame.time.set_timer(enemy_timer, 2000)
@@ -113,6 +124,8 @@ player_menu_rect = player_menu_surf.get_rect(center = (200,400))
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            with open('best_score.txt', 'w') as best_score_file:
+                best_score_file.write(str(best_score))
             pygame.quit()
             exit()
         if game_state == 'game':
@@ -197,12 +210,14 @@ while True:
         screen.blit(pressEnter1_surf, pressEnter1_rect)
         screen.blit(pressEnter2_surf, pressEnter2_rect)
         screen.blit(player_menu_surf, player_menu_rect)
+        displayBest()
     
     if game_state == 'menu':
         screen.blit(title1_surf, title1_rect)
         screen.blit(title2_surf, title2_rect)
         screen.blit(pressSpace_surf, pressSpace_rect)
         screen.blit(player_menu_surf, player_menu_rect)
+        displayBest()
 
     print(score)
 
